@@ -1,0 +1,12 @@
+git+git://github.com/iivvoo/twotest
+south
+django-haystack==1.2.7
+django-taggit
+django-tinymce
+django-userena
+stracks-api==0.2dev
+Pillow
+git+git://github.com/iivvoo/two.ol
+git+git://github.com/iivvoo/two.bootstrap
+git+git://github.com/iivvoo/django_drole
+coveralls
