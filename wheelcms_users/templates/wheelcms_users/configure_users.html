@@ -1,0 +1,117 @@
+{% extends "wheelcms_axle/configuration.html" %}
+{% load granules %}
+{% load staticfiles %}
+{% load i18n %}
+{% load url from future %}
+
+{% block granules %}
+  {{block.super}}
+  {% granule "javascript" %}
+    <script src="{% static "js/config_users.js" %}"></script>
+  {% endgranule %}
+{% endblock %}
+
+{% block config_form  %}
+{# move shared ng-app/init code to higherlevel tpl #}
+<div ng-app="wheelcms-admin" ng-init="init('{% url 'wheel_config' %}');" ng-controller="AdminCtrl">
+  <div ng-init='init({{userdata|safe}})' ng-controller="UserGroupCtrl">
+    <form method="post" action="." class="form-horizontal checksave">
+      {% csrf_token %}
+      <input type="hidden" name="config" value="users_groups"> {# XXX passes the current config id #}
+      <input ng-repeat="user in users" type="hidden" name="users" value="<[user_roles(user)]>">
+
+      <h3>Users</h3>
+      <table class="table table-bordered table-condensed table-hover">
+        <thead>
+          <th>Username</th><th>Email</th><th>Active</th><th>superuser</th>
+          <th ng-repeat="role in roles">
+          <[role.name]>
+          </th>
+          {# <th></th> #}
+        </thead>
+
+        <tbody>
+         <tr ng-repeat="user in users">
+           <td><[user.username]></td>
+           <td><[user.email]></td>
+           <td>
+             <input disabled="disabled" type="checkbox"
+                     ng-model="user.active">
+           </td>
+           <td>
+             <input disabled="disabled" type="checkbox"
+                     ng-model="user.superuser">
+           </td>
+           <td ng-repeat="role in roles">
+             <input type="checkbox"
+                     ng-model="user.roles[role.id]">
+           </td>
+          {# <td><a href="#" class="btn btn-xs btn-primary" ng-click="AddEditUser(user.id)">Edit</a></td> #}
+         </tr>
+        </tbody>
+      </table>
+      <div class="row">
+        <div class="col-md-12">
+          <button class="btn btn-primary pull-right canleave">Save</button>
+        </div>
+      </div>
+    </form>
+    {% if 0 %}
+    <div class="row">
+      <div class="col-md-12">
+        <hr>
+        <button class="btn btn-primary pull-right" ng-click="AddEditUser()">Add user</button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script type="text/ng-template" id="UserModal.html">
+      <div class="modal-header">
+          <h3>Add/Edit user <[user.username]> <[foo()]></h3>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" role="form">
+          <div class="form-group">
+            <label for="username" class="col-sm-3 control-label">Username</label>
+            <div class="col-sm-9">
+              <input type="text" class="form-control" placeholder="Username"
+                     name="username" value="" id="username" ng-model="user.username">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="firstname" class="col-sm-3 control-label">Name</label>
+            <div class="col-sm-4">
+              <input type="text" class="form-control" placeholder="First"
+                     name="firstname" value="" id="firstname" ng-model="user.firstname">
+            </div>
+            <div class="col-sm-5">
+              <input type="text" class="form-control" placeholder="last"
+                     name="lastname" value="" id="lastname" ng-model="user.lastname">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="password" class="col-sm-3 control-label">Password</label>
+            <div class="col-sm-9">
+              <input type="text" class="form-control" placeholder="Password"
+                     name="password" value="" id="password" ng-model="user.password">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="email" class="col-sm-3 control-label">Email</label>
+            <div class="col-sm-9">
+              <input type="text" class="form-control" placeholder="Email"
+                     name="email" value="" id="email" ng-model="user.email">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+          <button class="btn btn-primary" ng-click="ok()">OK</button>
+          <button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+      </div>
+  </script>
+
+</div>
+{% endblock %}
+
