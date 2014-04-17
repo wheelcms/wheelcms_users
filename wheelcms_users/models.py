@@ -56,13 +56,14 @@ class ConfigurationHandler(BaseConfigurationHandler):
                         u.first_name = user.get('firstname', '')
                         u.last_name = user.get('lastname', '')
                         u.email = user.get('email', '')
-                        ## active? 
-                        ## password
+                        ## active?
                     except (ValueError, User.DoesNotExist):
                         u = User(username=user.get('username').strip(),
                                  first_name=user.get('firstname', ''),
                                  last_name=user.get('last_name', ''),
                                  email=user.get('email', ''))
+                        u.save()
+
                     password = user.get('password', '').strip()
                     if password:
                         u.set_password(password)

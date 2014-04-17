@@ -20,17 +20,11 @@ usergroup.factory('UserModel', ["BaseModel", "$rootScope",
         },
 
         update_user: function(id, user) {
+            // update only does a shallow copy (extend),
+            // make sure roles are updated as well.
             var u = this.update(id, user);
             u.roles = {};
             angular.copy(user.roles||{}, u.roles);
-        },
-
-        add_user: function(user) {
-            id = this.add(user);
-            var u = this.find(id);
-            u.roles = {};
-            angular.copy(user.roles||{}, u.roles);
-
         },
 
         roles: function() {
@@ -42,7 +36,7 @@ usergroup.factory('UserModel', ["BaseModel", "$rootScope",
 
 usergroup.controller('AddEditModalCtrl', function($scope, $modalInstance, user,
                                                   UserModel) {
-    $scope.user = angular.copy(user) || {};
+    $scope.user = angular.copy(user) || {roles:{}};
     $scope.model = UserModel;
 
 
@@ -102,7 +96,7 @@ usergroup.controller('UserGroupCtrl', ["$scope", "$modal", "UserModel",
                 UserModel.update_user(userid, userdata);
             }
             else {
-                UserModel.add_user(userdata);
+                UserModel.add(userdata);
             }
         });
 
