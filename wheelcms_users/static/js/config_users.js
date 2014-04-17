@@ -46,6 +46,14 @@ usergroup.controller('AddEditModalCtrl', function($scope, $modalInstance, user,
     $scope.model = UserModel;
 
 
+    $scope.ModalHeader = function() {
+        if(user) {
+            return "Edit " + user.username;
+        }
+        else {
+            return "Add a new user";
+        }
+    };
     $scope.ok = function () {
       $modalInstance.close($scope.user);
     };
@@ -105,3 +113,52 @@ usergroup.controller('UserGroupCtrl', ["$scope", "$modal", "UserModel",
         $scope.changed = false;
     };
 }]);
+
+usergroup.directive("validUsername", function($rootScope, $http) {
+  /*
+   * Validate a username against a remote validator. A username may be
+   * invalid because it's already used or because it contains invalid
+   * characters.
+   *
+   * An existing username can be changed, but if the user brings it back to
+   * its original it must still be accepted (eventhough the remote validator
+   * would claim it is used). This directive implements some countermeasures
+   * to make sure this works, but currently it won't work between modal saves.
+   *
+   * E.g. a user edits user 'ivo', changes it to 'ivo2', closes the dialog (but
+   * no save!). The user edits this user (ivo2) again and restores it to 'ivo',
+   * which in this case won't be accepted anymore.
+   */
+  var toId;
+
+  return {
+    restrict: 'A',
+    require: '?ngModel',
+    link: function(scope, elem, attr, ngModel) {
+      //when the scope changes, check the email.
+      var original = scope.$eval(attr.ngModel);
+      scope.$watch(attr.ngModel, function(value) {
+        // if there was a previous attempt, stop it.
+        if(toId) {
+            clearTimeout(toId);
+            toId = null;
+        }
+
+        // if the name is unchanged, it's okay
+        if(value == original) {
+            ngModel.$setValidity('validUsername', true);
+            return;
+        }
+
+        // delay to avoid chattyness
+        toId = setTimeout(function(){
+            $http.get($rootScope.urlbase + '?config=users_groups&action=validate_username&username=' + value).success(function(data) {
+              ngModel.$setValidity('validUsername', data.isValid);
+            });
+            toId = null;
+
+        }, 200);
+      });
+    }
+  };
+});

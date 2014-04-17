@@ -5,6 +5,8 @@ from drole.types import Role
 from wheelcms_axle.models import Role as WheelRole
 
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
+from django.core.exceptions import ValidationError
 
 from wheelcms_axle.actions import action
 from wheelcms_axle.configuration import BaseConfigurationHandler
@@ -16,6 +18,22 @@ class ConfigurationHandler(BaseConfigurationHandler):
     label = "Users & Groups"
     model = None
     form = None
+
+    @action
+    @json
+    def validate_username(self, handler, instance):
+        username = handler.request.REQUEST.get('username', '')
+        if username:
+            if User.objects.filter(username=username).exists():
+                return dict(isValid=False)
+            try:
+                UserCreationForm.base_fields['username'].validate(username)
+                UserCreationForm.base_fields['username'].run_validators(username)
+                return dict(isValid=True)
+            except ValidationError:
+                pass
+
+        return dict(isValid=False)
 
     @action
     @json
@@ -34,14 +52,14 @@ class ConfigurationHandler(BaseConfigurationHandler):
                 elif state in ("added", "modified"):
                     try:
                         u = User.objects.get(pk=user['id'])
-                        u.username = user.get('username')
+                        u.username = user.get('username').strip()
                         u.first_name = user.get('firstname', '')
                         u.last_name = user.get('lastname', '')
                         u.email = user.get('email', '')
                         ## active? 
                         ## password
                     except (ValueError, User.DoesNotExist):
-                        u = User(username=user.get('username'),
+                        u = User(username=user.get('username').strip(),
                                  first_name=user.get('firstname', ''),
                                  last_name=user.get('last_name', ''),
                                  email=user.get('email', ''))
@@ -73,14 +91,11 @@ class ConfigurationHandler(BaseConfigurationHandler):
                                          for role in u.roles.all())
                               ) for u in users]
 
-        print data['existing']
         data['roles'] = [dict(id=role.id,
                               name=role.name,
                               description=role.description)
                          for role in Role.all()]
 
-        data['groups'] = []
-        
         return data
 
     def view(self, handler, instance):
