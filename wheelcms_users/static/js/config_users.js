@@ -1,68 +1,107 @@
-var ModalInstanceCtrl = function($scope, $modalInstance, user) {
-    $scope.user = user;
+usergroup = angular.module('usergroup', ["basemodel"]);
+
+usergroup.factory('UserModel', ["BaseModel", "$rootScope",
+                                function(BaseModel, $rootScope) {
+
+    var service = Object.create(BaseModel);
+    var _roles = [];
+
+    return angular.extend(service, {
+        construct_method: function(data) {
+            return $rootScope.urlbase + '?config=users_groups&action=user_data';
+        },
+        handle_data: function(data) {
+            _roles = data.roles || [];
+            return data;
+        },
+
+        users: function() {
+            return this.data().existing;
+        },
+
+        update_user: function(id, user) {
+            var u = this.update(id, user);
+            u.roles = {};
+            angular.copy(user.roles||{}, u.roles);
+        },
+
+        add_user: function(user) {
+            id = this.add(user);
+            var u = this.find(id);
+            u.roles = {};
+            angular.copy(user.roles||{}, u.roles);
+
+        },
+
+        roles: function() {
+            return _roles;
+        }
+
+    });
+}]);
+
+usergroup.controller('AddEditModalCtrl', function($scope, $modalInstance, user,
+                                                  UserModel) {
+    $scope.user = angular.copy(user) || {};
+    $scope.model = UserModel;
+
 
     $scope.ok = function () {
-      $modalInstance.close($scope.selected);
+      $modalInstance.close($scope.user);
+    };
+
+    $scope.remove = function () {
+      $modalInstance.close("delete");
     };
 
     $scope.cancel = function () {
       $modalInstance.dismiss('cancel');
     };
-};
 
-app.controller('UserGroupCtrl', function($scope, $modal) {
-    $scope.deleted = [];
-    $scope.users = [];
-    $scope.groups = [];
-    $scope.roles = [];
-
-    $scope.init = function(data) {
-        $scope.users = data.users;
-        $scope.groups = data.groups;
-        $scope.roles = data.roles;
-        console.log(data);
-    };
-
-    $scope.user_roles = function(user) {
-        var roles = [];
-        angular.forEach(user.roles, function(v, k) {
-            if(v) {
-              roles.push(k);
-            }
-        });
-        return angular.toJson({id:user.id, roles:roles});
-    };
-
-    $scope.AddEditUser = function(id) {
-        var i;
-        var modaluser = {username:"New user"};
-        // id may be not defined, we do handle that!
-        for(i=0; i < $scope.users.length; i++) {
-            console.log(id);
-            console.log($scope.users[i]);
-            if($scope.users[i].id == id) {
-                modaluser = $scope.users[id];
-            }
-        }
-        var modalInstance = $modal.open({
-            templateUrl: 'UserModal.html',
-            controller: ModalInstanceCtrl,
-            resolve: {
-                user: function() { return modaluser; }
-            }
-        });
-        modalInstance.result.then(function (selected) {
-            if(selected.device && selected.port) {
-                $scope.modified = true;
-                p.state = 'modified';
-                // mark port as no longer available
-                p.device = { title: selected.device.title, url: selected.device.url,
-                             portid: selected.port.id };
-            }
-
-        }, function () {
-            // dismissed
-        });
-
+    $scope.canDelete = function() {
+        return !!user;
     };
 });
+
+
+usergroup.controller('UserGroupCtrl', ["$scope", "$modal", "UserModel",
+                                      function($scope, $modal, UserModel) {
+    $scope.model = {};
+
+    $scope.changed = false;
+
+    UserModel.async().then(function(data) {
+        $scope.model = UserModel;
+    });
+
+
+    $scope.newEditUser = function(userid) {
+        var user = UserModel.find(userid);
+        var modalInstance = $modal.open({
+            templateUrl: "UserModal.html",
+            controller: "AddEditModalCtrl",
+            resolve: {
+                user: function() { return user; }
+            }
+        });
+        modalInstance.result.then(function(userdata) {
+            $scope.changed = true;
+            if(userdata == "delete") {
+                UserModel.remove(userid);
+                return;
+            }
+            if(userid) {
+                UserModel.update_user(userid, userdata);
+            }
+            else {
+                UserModel.add_user(userdata);
+            }
+        });
+
+    };
+
+    $scope.save = function() {
+        UserModel.save();
+        $scope.changed = false;
+    };
+}]);
