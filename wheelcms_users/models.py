@@ -60,7 +60,7 @@ class ConfigurationHandler(BaseConfigurationHandler):
                     except (ValueError, User.DoesNotExist):
                         u = User(username=user.get('username').strip(),
                                  first_name=user.get('firstname', ''),
-                                 last_name=user.get('last_name', ''),
+                                 last_name=user.get('lastname', ''),
                                  email=user.get('email', ''))
                         u.save()
 
@@ -91,7 +91,6 @@ class ConfigurationHandler(BaseConfigurationHandler):
                               roles=dict((role.role.id, True)
                                          for role in u.roles.all())
                               ) for u in users]
-
         data['roles'] = [dict(id=role.id,
                               name=role.name,
                               description=role.description)
