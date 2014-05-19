@@ -1,68 +1,158 @@
-var ModalInstanceCtrl = function($scope, $modalInstance, user) {
-    $scope.user = user;
+usergroup = angular.module('usergroup', ["basemodel"]);
 
+usergroup.factory('UserModel', ["BaseModel", "$rootScope",
+                                function(BaseModel, $rootScope) {
+
+    var service = Object.create(BaseModel);
+    var _roles = [];
+
+    return angular.extend(service, {
+        construct_method: function(data) {
+            return $rootScope.urlbase + '?config=users_groups&action=user_data';
+        },
+        handle_data: function(data) {
+            _roles = data.roles || [];
+            return data;
+        },
+
+        users: function() {
+            return this.data().existing;
+        },
+
+        update_user: function(id, user) {
+            // update only does a shallow copy (extend),
+            // make sure roles are updated as well.
+            var u = this.update(id, user);
+            u.roles = {};
+            angular.copy(user.roles||{}, u.roles);
+        },
+
+        roles: function() {
+            return _roles;
+        }
+
+    });
+}]);
+
+usergroup.controller('AddEditModalCtrl', function($scope, $modalInstance, user,
+                                                  UserModel) {
+    $scope.user = angular.copy(user) || {roles:{}};
+    $scope.model = UserModel;
+
+
+    $scope.ModalHeader = function() {
+        if(user) {
+            return "Edit " + user.username;
+        }
+        else {
+            return "Add a new user";
+        }
+    };
     $scope.ok = function () {
-      $modalInstance.close($scope.selected);
+      $modalInstance.close($scope.user);
+    };
+
+    $scope.remove = function () {
+      $modalInstance.close("delete");
     };
 
     $scope.cancel = function () {
       $modalInstance.dismiss('cancel');
     };
-};
 
-app.controller('UserGroupCtrl', function($scope, $modal) {
-    $scope.deleted = [];
-    $scope.users = [];
-    $scope.groups = [];
-    $scope.roles = [];
-
-    $scope.init = function(data) {
-        $scope.users = data.users;
-        $scope.groups = data.groups;
-        $scope.roles = data.roles;
-        console.log(data);
+    $scope.canDelete = function() {
+        return !!user;
     };
+});
 
-    $scope.user_roles = function(user) {
-        var roles = [];
-        angular.forEach(user.roles, function(v, k) {
-            if(v) {
-              roles.push(k);
-            }
-        });
-        return angular.toJson({id:user.id, roles:roles});
-    };
 
-    $scope.AddEditUser = function(id) {
-        var i;
-        var modaluser = {username:"New user"};
-        // id may be not defined, we do handle that!
-        for(i=0; i < $scope.users.length; i++) {
-            console.log(id);
-            console.log($scope.users[i]);
-            if($scope.users[i].id == id) {
-                modaluser = $scope.users[id];
-            }
-        }
+usergroup.controller('UserGroupCtrl', ["$scope", "$modal", "UserModel",
+                                      function($scope, $modal, UserModel) {
+    $scope.model = {};
+
+    $scope.changed = false;
+
+    UserModel.async().then(function(data) {
+        $scope.model = UserModel;
+    });
+
+
+    $scope.newEditUser = function(userid) {
+        var user = UserModel.find(userid);
         var modalInstance = $modal.open({
-            templateUrl: 'UserModal.html',
-            controller: ModalInstanceCtrl,
+            templateUrl: "UserModal.html",
+            controller: "AddEditModalCtrl",
             resolve: {
-                user: function() { return modaluser; }
+                user: function() { return user; }
             }
         });
-        modalInstance.result.then(function (selected) {
-            if(selected.device && selected.port) {
-                $scope.modified = true;
-                p.state = 'modified';
-                // mark port as no longer available
-                p.device = { title: selected.device.title, url: selected.device.url,
-                             portid: selected.port.id };
+        modalInstance.result.then(function(userdata) {
+            $scope.changed = true;
+            if(userdata == "delete") {
+                UserModel.remove(userid);
+                return;
             }
-
-        }, function () {
-            // dismissed
+            if(userid) {
+                UserModel.update_user(userid, userdata);
+            }
+            else {
+                UserModel.add(userdata);
+            }
         });
 
     };
+
+    $scope.save = function() {
+        UserModel.save();
+        $scope.changed = false;
+    };
+}]);
+
+usergroup.directive("validUsername", function($rootScope, $http) {
+  /*
+   * Validate a username against a remote validator. A username may be
+   * invalid because it's already used or because it contains invalid
+   * characters.
+   *
+   * An existing username can be changed, but if the user brings it back to
+   * its original it must still be accepted (eventhough the remote validator
+   * would claim it is used). This directive implements some countermeasures
+   * to make sure this works, but currently it won't work between modal saves.
+   *
+   * E.g. a user edits user 'ivo', changes it to 'ivo2', closes the dialog (but
+   * no save!). The user edits this user (ivo2) again and restores it to 'ivo',
+   * which in this case won't be accepted anymore.
+   */
+  var toId;
+
+  return {
+    restrict: 'A',
+    require: '?ngModel',
+    link: function(scope, elem, attr, ngModel) {
+      //when the scope changes, check the email.
+      var original = scope.$eval(attr.ngModel);
+      scope.$watch(attr.ngModel, function(value) {
+        // if there was a previous attempt, stop it.
+        if(toId) {
+            clearTimeout(toId);
+            toId = null;
+        }
+
+        // if the name is unchanged, it's okay
+        if(value == original) {
+            ngModel.$setValidity('validUsername', true);
+            return;
+        }
+
+        // delay to avoid chattyness
+        toId = setTimeout(function(){
+            $http.get($rootScope.urlbase + '?config=users_groups&action=validate_username&username=' + value).success(function(data) {
+              ngModel.$setValidity('validUsername', data.isValid);
+            });
+            toId = null;
+
+        }, 200);
+      });
+    }
+  };
 });

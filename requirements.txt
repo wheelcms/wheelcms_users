@@ -1,12 +1,15 @@
 git+git://github.com/iivvoo/twotest
 south
-django-haystack==1.2.7
-django-taggit
+django-haystack==2.1.0
+django-taggit==0.11.2
 django-tinymce
 django-userena
 stracks-api==0.2dev
 Pillow
+git+git://github.com/iivvoo/reg
 git+git://github.com/iivvoo/two.ol
 git+git://github.com/iivvoo/two.bootstrap
 git+git://github.com/iivvoo/django_drole
+git+git://github.com/wheelcms/wheelcms_axle.git
+git+git://github.com/iivvoo/django_granules
 coveralls

@@ -4,79 +4,77 @@
 {% load i18n %}
 {% load url from future %}
 
+{% block angular_init %}
+  {{block.super}}
+  <script type="text/javascript">
+    extradeps.push("usergroup");
+    extradeps.push("state_label");
+   </script>
+{% endblock %}
+
 {% block granules %}
   {{block.super}}
   {% granule "javascript" %}
+    <script src="{% static "js/basemodel.js" %}"></script>
+    <script src="{% static "js/statelabel.js" %}"></script>
     <script src="{% static "js/config_users.js" %}"></script>
   {% endgranule %}
 {% endblock %}
 
 {% block config_form  %}
 {# move shared ng-app/init code to higherlevel tpl #}
-<div ng-app="wheelcms-admin" ng-init="init('{% url 'wheel_config' %}');" ng-controller="AdminCtrl">
-  <div ng-init='init({{userdata|safe}})' ng-controller="UserGroupCtrl">
-    <form method="post" action="." class="form-horizontal checksave">
-      {% csrf_token %}
-      <input type="hidden" name="config" value="users_groups"> {# XXX passes the current config id #}
-      <input ng-repeat="user in users" type="hidden" name="users" value="<[user_roles(user)]>">
+  <div ng-controller="UserGroupCtrl">
+    <h3>Users <button type="button" ng-click="newEditUser()" class="btn btn-success btn-xs">
+      <i class="glyphicon glyphicon-plus"></i>
+        Add </span>
+      </button>
+      <button ng-hide="!changed" class="btn btn-success btn-xs pull-right" ng-click="save()">
+      <i class="glyphicon glyphicon-save"></i> Save changes</button>
+    </h3>
+    <table class="table table-bordered table-condensed table-hover">
+      <thead>
+        <th>Username</th><th>Name</th><th>Email</th><th>Active</th><th>superuser</th>
+        <th></th>
+      </thead>
 
-      <h3>Users</h3>
-      <table class="table table-bordered table-condensed table-hover">
-        <thead>
-          <th>Username</th><th>Email</th><th>Active</th><th>superuser</th>
-          <th ng-repeat="role in roles">
-          <[role.name]>
-          </th>
-          {# <th></th> #}
-        </thead>
+      <tbody>
+       <tr ng-repeat="user in model.users()">
+         <td><[user.username]></td>
+         <td><[user.firstname]> <[user.lastname]></td>
+         <td><[user.email]></td>
+         <td>
+           <input disabled="disabled" type="checkbox"
+                   ng-model="user.active">
+         </td>
+         <td>
+           <input disabled="disabled" type="checkbox"
+                   ng-model="user.superuser">
+         </td>
+         <td>
+           <state state="user.state"></state>
+           <button class="btn btn-primary btn-xs pull-right"
+                   ng-click="newEditUser(user.id)"><i class="glyphicon glyphicon-edit"></i> Edit</button>
 
-        <tbody>
-         <tr ng-repeat="user in users">
-           <td><[user.username]></td>
-           <td><[user.email]></td>
-           <td>
-             <input disabled="disabled" type="checkbox"
-                     ng-model="user.active">
-           </td>
-           <td>
-             <input disabled="disabled" type="checkbox"
-                     ng-model="user.superuser">
-           </td>
-           <td ng-repeat="role in roles">
-             <input type="checkbox"
-                     ng-model="user.roles[role.id]">
-           </td>
-          {# <td><a href="#" class="btn btn-xs btn-primary" ng-click="AddEditUser(user.id)">Edit</a></td> #}
-         </tr>
-        </tbody>
-      </table>
-      <div class="row">
-        <div class="col-md-12">
-          <button class="btn btn-primary pull-right canleave">Save</button>
-        </div>
-      </div>
-    </form>
-    {% if 0 %}
-    <div class="row">
-      <div class="col-md-12">
-        <hr>
-        <button class="btn btn-primary pull-right" ng-click="AddEditUser()">Add user</button>
-      </div>
-    </div>
-    {% endif %}
+         </td>
+       </tr>
+      </tbody>
+    </table>
   </div>
 
   <script type="text/ng-template" id="UserModal.html">
       <div class="modal-header">
-          <h3>Add/Edit user <[user.username]> <[foo()]></h3>
+          <h3><[ ModalHeader() ]></h3>
       </div>
       <div class="modal-body">
-        <form class="form-horizontal" role="form">
+        <form class="form-horizontal" role="form" name="user_form">
           <div class="form-group">
             <label for="username" class="col-sm-3 control-label">Username</label>
             <div class="col-sm-9">
               <input type="text" class="form-control" placeholder="Username"
-                     name="username" value="" id="username" ng-model="user.username">
+                     name="username" value="" id="username"
+                     ng-model="user.username"
+                     valid-username
+                     required>
             </div>
           </div>
           <div class="form-group">
@@ -100,18 +98,35 @@
           <div class="form-group">
             <label for="email" class="col-sm-3 control-label">Email</label>
             <div class="col-sm-9">
-              <input type="text" class="form-control" placeholder="Email"
+              <input type="email" class="form-control" placeholder="Email"
                      name="email" value="" id="email" ng-model="user.email">
             </div>
           </div>
+          <h3>Global roles</h3>
+          <table class="table table-condensed table-bordered">
+            <thead>
+              <tr>
+                <th ng-repeat="role in model.roles()">
+                  <[role.name]>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td ng-repeat="role in model.roles()">
+                  <input type="checkbox" ng-model="user.roles[role.id]">
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </form>
       </div>
       <div class="modal-footer">
-          <button class="btn btn-primary" ng-click="ok()">OK</button>
-          <button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+        <button class="btn btn-primary" ng-disabled="user_form.$invalid" ng-click="ok()">OK</button>
+         <button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+         <button class="btn btn-danger" ng-hide="!canDelete()" ng-click="remove()">Delete</button>
       </div>
   </script>
 
-</div>
 {% endblock %}
 
