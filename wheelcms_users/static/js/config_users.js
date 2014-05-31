@@ -66,8 +66,8 @@ usergroup.controller('AddEditModalCtrl', function($scope, $modalInstance, user,
 });
 
 
-usergroup.controller('UserGroupCtrl', ["$scope", "$modal", "UserModel",
-                                      function($scope, $modal, UserModel) {
+usergroup.controller('UserGroupCtrl', ["$rootScope", "$scope", "$modal", "UserModel",
+                                      function($rootScope, $scope, $modal, UserModel) {
     $scope.model = {};
 
     $scope.changed = false;
@@ -101,6 +101,12 @@ usergroup.controller('UserGroupCtrl', ["$scope", "$modal", "UserModel",
         });
 
     };
+
+    var unbind = $rootScope.$on('toolbar.savebutton.click', function(args, a) {
+        $scope.save();
+    });
+
+    $scope.$on('destroy', unbind);
 
     $scope.save = function() {
         UserModel.save();
