@@ -10,6 +10,7 @@ if __name__ == '__main__':
             'django.contrib.humanize',
 
             'userena',
+            'guardian',
 
             'south',
             'haystack',
