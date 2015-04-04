@@ -21,6 +21,7 @@ setup(name='wheelcms_users',
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'wheelcms_axle',
           'pytest',
           'mock',
       ],
