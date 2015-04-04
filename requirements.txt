@@ -7,7 +7,6 @@ django-userena
 stracks-api==0.2dev
 Pillow
 git+git://github.com/iivvoo/reg
-git+git://github.com/iivvoo/two.ol
 git+git://github.com/iivvoo/two.bootstrap
 git+git://github.com/iivvoo/django_drole
 git+git://github.com/wheelcms/wheelcms_axle.git

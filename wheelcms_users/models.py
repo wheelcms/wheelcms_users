@@ -1,4 +1,3 @@
-from two.ol.base import json
 from json import loads as load_json
 
 from drole.types import Role
@@ -11,6 +10,7 @@ from django.core.exceptions import ValidationError
 from wheelcms_axle.actions import action
 from wheelcms_axle.configuration import BaseConfigurationHandler
 from wheelcms_axle.registries.configuration import configuration_registry
+from wheelcms_axle.utils import json
 
 
 class ConfigurationHandler(BaseConfigurationHandler):
