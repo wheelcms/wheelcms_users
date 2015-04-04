@@ -16,14 +16,9 @@ def handler():
                        'django.template.context.get_standard_processors',
                        return_value=())
     patch_processors.start()
-    patch_site = mock.patch('two.ol.base.BaseHandler.site',
-                                 new_callable=mock.PropertyMock)
-    patch_site.return_value = mock.Mock()
-    patch_site.start()
     try:
         return ConfigurationHandler(request=mock.Mock())
     finally:
-        patch_site.stop()
         patch_processors.stop()
 
 class TestUserConfig(object):
